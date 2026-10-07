@@ -1,0 +1,120 @@
+name: Send Marine Forecast
+# Dispatch titles are matched by the fallback guard below — keep them in sync.
+run-name: "${{ github.event_name == 'schedule' && 'Scheduled fallback forecast' || format('{0} forecast{1}{2}', inputs.forecast_type, inputs.test_mode && ' [TEST]' || '', inputs.recipient_override != '' && ' [override]' || '') }}"
+
+on:
+  # Primary trigger: the Cloudflare Worker in worker/ dispatches this workflow
+  # on time. The schedule below is a fallback only — GitHub cron runs start
+  # hours late, so it skips if the Worker's run for the slot already succeeded.
+  #
+  # Cron is UTC-only. To hit 07:00 / 19:00 Europe/Madrid year-round we fire at
+  # both candidate UTC hours per slot (summer CEST = UTC+2, winter CET = UTC+1)
+  # and skip runs that don't match the target Madrid local hour.
+  schedule:
+    - cron: '0 5 * * *'   # 07:00 Madrid (summer)
+    - cron: '0 6 * * *'   # 07:00 Madrid (winter)
+    - cron: '0 17 * * *'  # 19:00 Madrid (summer)
+    - cron: '0 18 * * *'  # 19:00 Madrid (winter)
+  workflow_dispatch:
+    inputs:
+      forecast_type:
+        description: 'Forecast type'
+        required: true
+        default: 'evening'
+        type: choice
+        options:
+          - morning
+          - evening
+      recipient_override:
+        description: 'Override recipient (leave empty to use config default)'
+        required: false
+        type: string
+      test_mode:
+        description: 'Mark as TEST — prefixes subject and adds a banner explaining this is a test'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read  # fallback guard lists recent runs
+
+jobs:
+  send-forecast:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Determine forecast type
+        id: forecast-type
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=${{ github.event.inputs.forecast_type }}" >> $GITHUB_OUTPUT
+            echo "skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Decide from the cron that triggered us + current Madrid DST state.
+          # Reading wall-clock hour here is unreliable: GitHub Actions cron can
+          # drift 1-2h, which pushed the hour past 07/19 and skipped every run.
+          TZ_ABBR=$(TZ='Europe/Madrid' date +%Z)
+          SCHEDULE="${{ github.event.schedule }}"
+
+          case "$SCHEDULE|$TZ_ABBR" in
+            "0 5 * * *|CEST")  TYPE=morning ;;
+            "0 6 * * *|CET")   TYPE=morning ;;
+            "0 17 * * *|CEST") TYPE=evening ;;
+            "0 18 * * *|CET")  TYPE=evening ;;
+            *)
+              echo "Skipping: cron '$SCHEDULE' is the DST partner for $TZ_ABBR, not active now."
+              echo "skip=true" >> $GITHUB_OUTPUT
+              exit 0
+              ;;
+          esac
+
+          # Fallback guard: skip if the Worker-dispatched run for this slot
+          # already succeeded. Late cron runs land within ~8h of the slot and
+          # the next same-slot run is 24h away, so a 12h window is unambiguous.
+          SINCE=$(date -u -d '12 hours ago' +%Y-%m-%dT%H:%M:%SZ)
+          SENT=$(gh run list --workflow forecast.yml --event workflow_dispatch \
+            --status success --limit 20 --repo "$GITHUB_REPOSITORY" \
+            --json displayTitle,createdAt \
+            --jq "[.[] | select(.displayTitle == \"$TYPE forecast\" and .createdAt >= \"$SINCE\")] | length")
+          if [ "$SENT" -gt 0 ]; then
+            echo "Skipping: $TYPE forecast already sent by the Cloudflare cron dispatch."
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+          echo "skip=false" >> $GITHUB_OUTPUT
+
+      - name: Run forecast
+        if: steps.forecast-type.outputs.skip != 'true'
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          RECIPIENT_OVERRIDE: ${{ github.event.inputs.recipient_override }}
+          TEST_MODE: ${{ github.event.inputs.test_mode }}
+          SEND_LOG_TOKEN: ${{ secrets.SEND_LOG_TOKEN }}
+        run: python run_forecast.py --${{ steps.forecast-type.outputs.type }}
+
+      - name: Commit position cache update
+        if: steps.forecast-type.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add position_cache.json
+          git diff --staged --quiet || git commit -m "Update position cache [skip ci]"
+          git push

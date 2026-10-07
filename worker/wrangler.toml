@@ -1,0 +1,30 @@
+name = "marine-weather-cron"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+# Public URL serves only POST /log (bearer token) and POST /resend-webhook (Svix signature).
+workers_dev = true
+preview_urls = false
+
+# Keep invocation logs (dispatch, watchdog, alerts) in the Cloudflare dashboard.
+[observability]
+enabled = true
+
+[triggers]
+crons = ["0 5,6,17,18 * * *", "30 5,6,17,18 * * *"]  # dispatch, then watchdog
+
+[[d1_databases]]
+binding = "DB"
+database_name = "marine-weather-log"
+database_id = "<your-d1-database-id>"  # from `npx wrangler d1 create marine-weather-log`
+
+[vars]
+GITHUB_REPO = "<owner>/<repo>"
+ALERT_EMAIL = "you@example.com"
+
+# Secrets (not in this file), set with `npx wrangler secret put <NAME>`:
+# - GH_TOKEN — fine-grained PAT scoped to this repo, Actions: read & write, no expiration.
+# - LOG_TOKEN — shared bearer token for POST /log; same value as the repo's
+#   SEND_LOG_TOKEN Actions secret.
+# - RESEND_API_KEY, RESEND_FROM_EMAIL — for watchdog/bounce alert emails.
+# - RESEND_WEBHOOK_SECRET — signing secret (whsec_...) of the Resend webhook
+#   pointing at https://marine-weather-cron.<your-subdomain>.workers.dev/resend-webhook.

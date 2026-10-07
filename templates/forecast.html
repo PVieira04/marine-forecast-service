@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ email.subject }}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #1a365d;
+            font-size: 24px;
+            margin-bottom: 8px;
+            border-bottom: 3px solid #2c5282;
+            padding-bottom: 8px;
+        }
+        h2 {
+            color: #2c5282;
+            font-size: 18px;
+            margin-top: 24px;
+            margin-bottom: 12px;
+            background-color: #ebf8ff;
+            padding: 8px 12px;
+            border-radius: 4px;
+        }
+        .location {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .summary {
+            background-color: #f7fafc;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .summary ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .summary li {
+            padding: 6px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .summary li:last-child {
+            border-bottom: none;
+        }
+        .confidence {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 8px;
+        }
+        .confidence-high {
+            background-color: #c6f6d5;
+            color: #276749;
+        }
+        .confidence-med {
+            background-color: #fefcbf;
+            color: #975a16;
+        }
+        .confidence-low {
+            background-color: #fed7d7;
+            color: #c53030;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            font-size: 14px;
+        }
+        th {
+            background-color: #2c5282;
+            color: white;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+        }
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        tr:nth-child(even) {
+            background-color: #f7fafc;
+        }
+        .alert {
+            background-color: #fff5f5 !important;
+        }
+        .alert td {
+            color: #c53030;
+            font-weight: 600;
+        }
+        .low-conf {
+            background-color: #fffaf0 !important;
+            border-left: 3px solid #d69e2e;
+        }
+        .test-banner {
+            background-color: #fefcbf;
+            border: 2px dashed #b7791f;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 16px;
+            color: #744210;
+            font-size: 14px;
+        }
+        .test-banner strong {
+            color: #744210;
+        }
+        .low-warning {
+            background-color: #fff5f5;
+            border-left: 4px solid #c53030;
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+            color: #742a2a;
+            font-size: 14px;
+        }
+        .low-warning strong {
+            color: #c53030;
+        }
+        .breakdown {
+            font-size: 12px;
+            color: #4a5568;
+            margin-top: 4px;
+            padding-left: 16px;
+            font-family: 'SF Mono', Menlo, Consolas, monospace;
+        }
+        .key-conditions {
+            margin-bottom: 8px;
+        }
+        .key-conditions th:nth-child(3),
+        .key-conditions td:nth-child(3) {
+            text-align: center;
+            width: 110px;
+        }
+        .key-conditions tr.breakdown-row td {
+            background-color: #f7fafc;
+            border-bottom: 1px solid #e2e8f0;
+            padding-top: 4px;
+            padding-bottom: 8px;
+        }
+        .confidence-explainer {
+            margin: 8px 0 24px 0;
+            font-size: 13px;
+            color: #4a5568;
+            background-color: #f7fafc;
+            border-radius: 6px;
+            padding: 8px 12px;
+        }
+        .confidence-explainer summary {
+            cursor: pointer;
+            font-weight: 600;
+            color: #2c5282;
+        }
+        .confidence-explainer p {
+            margin: 8px 0;
+        }
+        .confidence-explainer ul {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        .confidence-explainer li {
+            margin-bottom: 4px;
+        }
+        .model-layout {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 16px 0;
+            margin-left: -16px;
+            margin-right: -16px;
+            margin-top: 0;
+        }
+        .model-cell {
+            width: 50%;
+            vertical-align: top;
+            padding: 0;
+        }
+        .model-section-title {
+            background-color: #2c5282;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0;
+            padding: 8px 12px;
+            border-radius: 4px 4px 0 0;
+            letter-spacing: 0.3px;
+        }
+        .model-section-title-marine {
+            background-color: #2c7a7b;
+        }
+        .model-table {
+            width: 100%;
+            font-size: 12px;
+            margin-top: 0;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .model-table th {
+            background-color: #edf2f7;
+            color: #4a5568;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 6px 8px;
+        }
+        .model-table td {
+            padding: 5px 8px;
+        }
+        .model-table th:nth-child(2),
+        .model-table th:nth-child(3),
+        .model-table td:nth-child(2),
+        .model-table td:nth-child(3) {
+            text-align: right;
+            font-family: 'SF Mono', Menlo, Consolas, monospace;
+        }
+        .wind-alert {
+            display: inline-block;
+            margin-left: 4px;
+        }
+        .chart-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .chart-container img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+        }
+        .footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+            font-size: 12px;
+            color: #718096;
+        }
+        .footer a {
+            color: #2c5282;
+        }
+        .sun-times {
+            font-size: 14px;
+            color: #666;
+            margin-top: 16px;
+            padding: 8px;
+            background-color: #fffaf0;
+            border-radius: 4px;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .container {
+                padding: 16px;
+            }
+            table {
+                font-size: 12px;
+            }
+            th, td {
+                padding: 6px 4px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if email.test_mode %}
+        <div class="test-banner">
+            <strong>🧪 TEST EMAIL — please ignore.</strong>
+            This is a preview of an updated forecast format. The data is real, but you don't need to act on this email — your normal scheduled forecast will arrive at the usual time.
+        </div>
+        {% endif %}
+        <h1>Marine Weather Forecast</h1>
+        <p class="location">
+            <strong>{{ email.location_name }}</strong><br>
+            {{ "%.4f"|format(email.latitude|abs) }}°{{ "N" if email.latitude >= 0 else "S" }}, {{ "%.4f"|format(email.longitude|abs) }}°{{ "E" if email.longitude >= 0 else "W" }}
+            {% if email.position_source == "ais_live" %}
+            <br><span style="color: #276749; font-size: 12px;">Position via AIS (updated {{ email.position_updated_at.strftime('%Y-%m-%d %H:%M UTC') if email.position_updated_at else 'recently' }})</span>
+            {% elif email.position_source == "ais_stale" %}
+            <br><span style="color: #975a16; font-size: 12px;">Position via AIS - STALE (last update: {{ email.position_updated_at.strftime('%Y-%m-%d %H:%M UTC') if email.position_updated_at else 'unknown' }})</span>
+            {% elif email.position_source == "default" %}
+            <br><span style="color: #c53030; font-size: 12px;">Using default vessel location - AIS position not available</span>
+            {% endif %}
+        </p>
+
+        {% if email.chart_na_b64 or email.chart_eu_b64 %}
+        <h2>=== SYNOPTIC CHARTS ===</h2>
+        {% if email.chart_na_b64 %}
+        <div class="chart-container">
+            <p style="font-weight: 600; color: #2c5282; margin-bottom: 4px;">North Atlantic Analysis</p>
+            {% if email.chart_na_fetched_at %}
+            <p style="font-size: 12px; color: #666; margin-top: 2px; margin-bottom: 4px;">Chart from: {{ email.chart_na_fetched_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+            {% endif %}
+            <img src="cid:chart_na" alt="DWD North Atlantic Synoptic Chart">
+        </div>
+        {% endif %}
+        {% if email.chart_eu_b64 %}
+        <div class="chart-container">
+            <p style="font-weight: 600; color: #2c5282; margin-bottom: 4px;">Western Europe Analysis</p>
+            {% if email.chart_eu_fetched_at %}
+            <p style="font-size: 12px; color: #666; margin-top: 2px; margin-bottom: 4px;">Chart from: {{ email.chart_eu_fetched_at.strftime('%Y-%m-%d %H:%M UTC') }}</p>
+            {% endif %}
+            <img src="cid:chart_eu" alt="DWD Western Europe Synoptic Chart">
+        </div>
+        {% endif %}
+        {% endif %}
+
+        {% if email.low_confidence_warning %}
+        <div class="low-warning">
+            <strong>⚠️ Models disagree significantly on at least one metric below.</strong>
+            Verify against another forecast source before sailing. The figures shown are pessimistic (worst-case across models).
+        </div>
+        {% endif %}
+
+        <h2>=== KEY CONDITIONS ===</h2>
+        <table class="key-conditions">
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Wind</strong></td>
+                    <td>{{ email.summary_wind }}</td>
+                    <td><span class="confidence confidence-{{ email.summary_wind_confidence|lower }}">{{ email.summary_wind_confidence }}</span></td>
+                </tr>
+                {% if email.summary_wind_breakdown %}
+                <tr class="breakdown-row">
+                    <td></td>
+                    <td colspan="2" class="breakdown">
+                        Models (kn max):
+                        {% for model, value in email.summary_wind_breakdown.items()|sort(attribute=1) %}{{ model }}={{ "%.0f"|format(value) }}{% if not loop.last %} · {% endif %}{% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td><strong>Swell</strong></td>
+                    <td>{{ email.summary_swell }}</td>
+                    <td><span class="confidence confidence-{{ email.summary_swell_confidence|lower }}">{{ email.summary_swell_confidence }}</span></td>
+                </tr>
+                {% if email.summary_swell_breakdown %}
+                <tr class="breakdown-row">
+                    <td></td>
+                    <td colspan="2" class="breakdown">
+                        Models (m max):
+                        {% for model, value in email.summary_swell_breakdown.items()|sort(attribute=1) %}{{ model }}={{ "%.1f"|format(value) }}{% if not loop.last %} · {% endif %}{% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td><strong>Waves</strong></td>
+                    <td>{{ email.summary_waves }}</td>
+                    <td><span class="confidence confidence-{{ email.summary_waves_confidence|lower }}">{{ email.summary_waves_confidence }}</span></td>
+                </tr>
+                {% if email.summary_waves_breakdown %}
+                <tr class="breakdown-row">
+                    <td></td>
+                    <td colspan="2" class="breakdown">
+                        Models (m max):
+                        {% for model, value in email.summary_waves_breakdown.items()|sort(attribute=1) %}{{ model }}={{ "%.1f"|format(value) }}{% if not loop.last %} · {% endif %}{% endfor %}
+                    </td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td><strong>Pressure</strong></td>
+                    <td>{{ email.summary_pressure }}</td>
+                    <td><span class="confidence confidence-{{ email.summary_pressure_confidence|lower }}">{{ email.summary_pressure_confidence }}</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Visibility</strong></td>
+                    <td>{{ email.summary_visibility }}</td>
+                    <td><span style="color: #a0aec0; font-size: 12px;">—</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Conditions</strong></td>
+                    <td>{{ email.summary_conditions }}</td>
+                    <td><span class="confidence confidence-{{ email.summary_conditions_confidence|lower }}">{{ email.summary_conditions_confidence }}</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <details class="confidence-explainer">
+            <summary>What does the confidence column mean?</summary>
+            <p>
+                Each forecast is the consensus of up to 15 weather models and 5 wave models. The confidence label compares how much those models <em>disagree</em> about this slot:
+            </p>
+            <ul>
+                <li><span class="confidence confidence-high">HIGH</span> Models within ~5&nbsp;kn (wind), ~0.3&nbsp;m (waves/swell), ~3&nbsp;hPa (pressure), or ~2&nbsp;°C of each other.</li>
+                <li><span class="confidence confidence-med">MED</span> Larger spread but still useful — treat the figure as a working estimate.</li>
+                <li><span class="confidence confidence-low">LOW</span> Models disagree significantly. Cross-check against another forecast source before sailing on this slot.</li>
+            </ul>
+            <p>
+                Numbers shown are <strong>pessimistic</strong> — the worst-case across all surviving models. Wind / waves / swell are ranges (low–high) so you can see how variable the slot is; gusts, pressure, temp, visibility are single values.
+            </p>
+        </details>
+
+        <h2>=== {{ email.time_blocks|length * 6 }}-HOUR FORECAST ===</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Wind</th>
+                    <th>Gusts</th>
+                    <th>Dir</th>
+                    <th>Waves</th>
+                    <th>Swell</th>
+                    <th>Vis</th>
+                    <th>hPa</th>
+                    <th>Rain</th>
+                    <th>°C</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for block in email.time_blocks %}
+                <tr class="{% if block.wind_alert %}alert{% elif 'LOW' in [block.wind_confidence, block.wave_confidence, block.swell_confidence] %}low-conf{% endif %}">
+                    <td>{{ block.label }}</td>
+                    {% if block.has_data %}
+                    <td>
+                        {% if block.wind_alert %}<strong>{% endif %}
+                        {{ "%.0f"|format(block.wind_min_kn) }}-{{ "%.0f"|format(block.wind_max_kn) }}kn
+                        {% if block.wind_alert %}</strong><span class="wind-alert">⚠️</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if block.wind_alert %}<strong>{% endif %}
+                        {{ "%.0f"|format(block.wind_gust_max_kn) }}kn
+                        {% if block.wind_alert %}</strong>{% endif %}
+                    </td>
+                    <td>{{ block.wind_direction }}</td>
+                    <td>
+                        {% if block.wave_height_max - block.wave_height_min < 0.05 %}
+                        {{ "%.1f"|format(block.wave_height_max) }}m
+                        {% else %}
+                        {{ "%.1f"|format(block.wave_height_min) }}-{{ "%.1f"|format(block.wave_height_max) }}m
+                        {% endif %}
+                        {{ block.wave_direction }}
+                    </td>
+                    <td>
+                        {% if block.swell_height_max - block.swell_height_min < 0.05 %}
+                        {{ "%.1f"|format(block.swell_height_max) }}m
+                        {% else %}
+                        {{ "%.1f"|format(block.swell_height_min) }}-{{ "%.1f"|format(block.swell_height_max) }}m
+                        {% endif %}
+                        {{ block.swell_direction }} {{ "%.0f"|format(block.swell_period) }}s
+                    </td>
+                    <td>{{ block.visibility }}</td>
+                    <td>{{ "%.0f"|format(block.pressure) }}</td>
+                    <td>{{ block.rain_probability }}%</td>
+                    <td>{{ "%.0f"|format(block.temperature) }}°C</td>
+                    {% else %}
+                    <td colspan="9" style="text-align: center; color: #a0aec0; font-style: italic;">No model data for this slot</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <p style="font-size: 12px; color: #666; margin-top: 8px;">
+            ⚠️ = Wind exceeds threshold
+        </p>
+
+        {% if email.destination_name and email.destination_blocks %}
+        <h2>=== DESTINATION: {{ email.destination_name }} ===</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Wind</th>
+                    <th>Gusts</th>
+                    <th>Dir</th>
+                    <th>Waves</th>
+                    <th>Swell</th>
+                    <th>Vis</th>
+                    <th>hPa</th>
+                    <th>Rain</th>
+                    <th>°C</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for block in email.destination_blocks %}
+                <tr class="{% if block.wind_alert %}alert{% elif 'LOW' in [block.wind_confidence, block.wave_confidence, block.swell_confidence] %}low-conf{% endif %}">
+                    <td>{{ block.label }}</td>
+                    {% if block.has_data %}
+                    <td>
+                        {% if block.wind_alert %}<strong>{% endif %}
+                        {{ "%.0f"|format(block.wind_min_kn) }}-{{ "%.0f"|format(block.wind_max_kn) }}kn
+                        {% if block.wind_alert %}</strong><span class="wind-alert">⚠️</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if block.wind_alert %}<strong>{% endif %}
+                        {{ "%.0f"|format(block.wind_gust_max_kn) }}kn
+                        {% if block.wind_alert %}</strong>{% endif %}
+                    </td>
+                    <td>{{ block.wind_direction }}</td>
+                    <td>
+                        {% if block.wave_height_max - block.wave_height_min < 0.05 %}
+                        {{ "%.1f"|format(block.wave_height_max) }}m
+                        {% else %}
+                        {{ "%.1f"|format(block.wave_height_min) }}-{{ "%.1f"|format(block.wave_height_max) }}m
+                        {% endif %}
+                        {{ block.wave_direction }}
+                    </td>
+                    <td>
+                        {% if block.swell_height_max - block.swell_height_min < 0.05 %}
+                        {{ "%.1f"|format(block.swell_height_max) }}m
+                        {% else %}
+                        {{ "%.1f"|format(block.swell_height_min) }}-{{ "%.1f"|format(block.swell_height_max) }}m
+                        {% endif %}
+                        {{ block.swell_direction }} {{ "%.0f"|format(block.swell_period) }}s
+                    </td>
+                    <td>{{ block.visibility }}</td>
+                    <td>{{ "%.0f"|format(block.pressure) }}</td>
+                    <td>{{ block.rain_probability }}%</td>
+                    <td>{{ "%.0f"|format(block.temperature) }}°C</td>
+                    {% else %}
+                    <td colspan="9" style="text-align: center; color: #a0aec0; font-style: italic;">No model data for this slot</td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+
+        {% if email.sunrise and email.sunset %}
+        <div class="sun-times">
+            ☀️ Sunrise: {{ email.sunrise }} | Sunset: {{ email.sunset }}
+        </div>
+        {% endif %}
+
+        {% if email.weather_model_table or email.marine_model_table %}
+        <h2>=== ALL MODELS (NEXT 6H) ===</h2>
+        <p style="font-size: 12px; color: #666; margin-top: 0; margin-bottom: 12px;">
+            Every surviving model's max wind/gust (weather) and max wave/swell (marine) for the next 6h. Useful for cross-checking against another forecast source.
+        </p>
+        <table class="model-layout" role="presentation">
+            <tr>
+                {% if email.weather_model_table %}
+                <td class="model-cell">
+                    <h3 class="model-section-title">Weather models</h3>
+                    <table class="model-table">
+                        <thead>
+                            <tr>
+                                <th>Source</th>
+                                <th>Wind (kn)</th>
+                                <th>Gusts (kn)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model, wind, gust in email.weather_model_table %}
+                            <tr>
+                                <td>{{ model }}</td>
+                                <td>{% if wind is not none %}{{ "%.0f"|format(wind) }}{% else %}—{% endif %}</td>
+                                <td>{% if gust is not none %}{{ "%.0f"|format(gust) }}{% else %}—{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </td>
+                {% endif %}
+                {% if email.marine_model_table %}
+                <td class="model-cell">
+                    <h3 class="model-section-title model-section-title-marine">Wave models</h3>
+                    <table class="model-table">
+                        <thead>
+                            <tr>
+                                <th>Source</th>
+                                <th>Waves (m)</th>
+                                <th>Swell (m)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for model, wave, swell in email.marine_model_table %}
+                            <tr>
+                                <td>{{ model }}</td>
+                                <td>{% if wave is not none %}{{ "%.1f"|format(wave) }}{% else %}—{% endif %}</td>
+                                <td>{% if swell is not none %}{{ "%.1f"|format(swell) }}{% else %}—{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </td>
+                {% endif %}
+            </tr>
+        </table>
+        {% endif %}
+
+        <div class="footer">
+            <p>
+                Generated: {{ email.generated_at.strftime('%Y-%m-%d %H:%M UTC') }}<br>
+                Location: {{ email.location_name }} ({{ "%.4f"|format(email.latitude|abs) }}°{{ "N" if email.latitude >= 0 else "S" }}, {{ "%.4f"|format(email.longitude|abs) }}°{{ "E" if email.longitude >= 0 else "W" }})<br>
+                {% if email.position_source == "ais_live" %}
+                Position source: AIS (live)
+                {% elif email.position_source == "ais_stale" %}
+                Position source: AIS (stale - vessel may have moved)
+                {% elif email.position_source == "default" %}
+                Position source: Default location (AIS unavailable)
+                {% else %}
+                Position source: Unknown
+                {% endif %}
+            </p>
+            <p>
+                Data: Open-Meteo Weather API, Open-Meteo Marine API, DWD Synoptic Charts<br>
+                <em>Not for navigation. Always consult official weather services.</em>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+name: Update AIS Position
+
+on:
+  schedule:
+    - cron: '30 1 * * *'   # 01:30 UTC
+    - cron: '30 9 * * *'   # 09:30 UTC
+    - cron: '30 13 * * *'  # 13:30 UTC
+    - cron: '30 21 * * *'  # 21:30 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  update-position:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Update AIS position
+        env:
+          AISSTREAM_API_KEY: ${{ secrets.AISSTREAM_API_KEY }}
+          # Not time-sensitive: wait longer, since a moored Class B set reports only every 3 min.
+          AIS_LOOKUP_TIMEOUT: '300'
+        run: python run_forecast.py --position-only
+
+      - name: Commit position cache update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add position_cache.json
+          git diff --staged --quiet || git commit -m "Update position cache [skip ci]"
+          git push

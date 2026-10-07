@@ -1,0 +1,69 @@
+vessel:
+  name: "Example Yacht"
+  call_sign: "XXXX0"
+  mmsi: "000000000"
+
+recipient_email: "skipper@example.com"
+bcc_email: "you@example.com"
+# Failure details and watchdog alerts go here (defaults to bcc_email).
+alert_email: "you@example.com"
+
+# Send log: each send is recorded in Cloudflare D1 via the Worker in worker/.
+# Needs the SEND_LOG_TOKEN Actions secret; remove this line to disable.
+send_log_url: "https://marine-weather-cron.<your-subdomain>.workers.dev/log"
+
+schedule:
+  timezone: "Europe/Madrid"
+  morning_hour: 7
+  evening_hour: 19
+
+forecast:
+  morning_hours: 18
+  evening_hours: 36
+  wind_threshold_kn: 20
+
+  # Multi-model ensemble. Open-Meteo silently returns null for any model
+  # whose grid doesn't cover the queried lat/lon, so this list is the
+  # kitchen sink — region selection happens implicitly per slot. Models
+  # that consistently produce no data are simply ignored.
+  weather_models:
+    - ecmwf_ifs025
+    - ecmwf_aifs025
+    - gfs_global
+    - gfs_graphcast025
+    - icon_global
+    - icon_eu
+    - icon_d2
+    - meteofrance_arpege_world
+    - meteofrance_arpege_europe
+    - meteofrance_arome_france_hd
+    - ukmo_global_deterministic_10km
+    - gem_global
+    - jma_gsm
+    - bom_access_global
+    - cma_grapes_global
+
+  marine_models:
+    - ecmwf_wam025
+    - meteofrance_wave
+    - gwam
+    - ewam
+    - ncep_gfswave025
+
+charts:
+  include_na: false
+  include_eu: true
+
+default_position:
+  latitude: 39.5696
+  longitude: 2.6502
+  location_name: "Palma de Mallorca"
+
+# Optional destination for passage planning
+# Uncomment and fill in to enable destination forecasts
+# destination:
+#   name: "Gibraltar"
+#   latitude: 36.1408
+#   longitude: -5.3536
+
+ais_stale_threshold_hours: 24

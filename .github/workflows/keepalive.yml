@@ -1,0 +1,23 @@
+name: Keep Alive
+
+on:
+  schedule:
+    - cron: '0 12 1 * *'  # 1st of every month at noon UTC
+
+permissions:
+  contents: write
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Keep workflows alive
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          date -u > .keepalive
+          git add .keepalive
+          git commit -m "Monthly keepalive [skip ci]"
+          git push
